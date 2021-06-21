@@ -1,6 +1,6 @@
 #lang racket
 
-(require "irregex.rkt" "chibi-test.rkt")
+(require "irregex.scm" "chibi-test.rkt")
 
 ;; essentially unported; tests do not pass.
 

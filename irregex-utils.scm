@@ -1,6 +1,6 @@
 #lang racket
 
-(require "irregex.rkt")
+(require "irregex.scm")
 
 ;;;; irregex-utils.scm
 ;;

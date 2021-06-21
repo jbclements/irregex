@@ -20,7 +20,7 @@
 
 ;; porting notes: this code compiles but is essentially entirely untested.
 
-(require "irregex.rkt")
+(require "irregex.scm")
 
 (define (string-intersperse los s)
   (apply string-append (add-between los s)))

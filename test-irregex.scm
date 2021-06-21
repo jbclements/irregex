@@ -15,7 +15,7 @@
 
 (module+ test
 
-(require irregex/irregex
+(require "irregex.scm"
          "chibi-test.rkt")
 
 

@@ -8,8 +8,8 @@
 ;; disabling all of these tests for now, alas.
 #;(
 
-(require "irregex.rkt"
-         "irregex-utils.rkt")
+(require "irregex.scm"
+         "irregex-utils.scm")
 
 (define-syntax let1
   (syntax-rules ()

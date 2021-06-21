@@ -1,6 +1,6 @@
 #lang racket
 
-(require "irregex.rkt"
+(require "irregex.scm"
          "chibi-test.rkt")
 
 (ru:run-tests
