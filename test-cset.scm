@@ -1,17 +1,28 @@
+#lang racket
+
+;; quick port of testing to racket?
+;; ... hmm, seems to be working?
+
+
 ;; Test of the internal character-set API.  This is here so we can switch
 ;; representation of csets more easily.
 
 ;;; Some of these are based on Olin Shivers' SRFI 14 tests
 
-(cond-expand
-  (chicken-5 (import test (chicken irregex)))
-  (else (use test extras utils irregex)))
+(module+ test
 
-(load "irregex.scm")
+(require irregex/irregex
+         "chibi-test.rkt")
+
+
+;(load "irregex.scm")
 
 (define (vowel? c) (member c '(#\a #\e #\i #\o #\u)))
 
-(test-begin)
+
+(ru:run-tests
+(ru:test-suite
+ "cset tests"
 
 (test-assert
  (cset=? (plist->cset '(#\a #\a #\e #\e #\i #\i #\o #\o #\u #\u))
@@ -114,6 +125,7 @@
          (cset-difference (sre->cset 'hex-digit) (sre->cset 'alpha))))
 (test-assert
  (cset=? (string->cset "abcdefABCDEF")
-         (cset-intersection (sre->cset 'hex-digit) (sre->cset 'alpha))))
+         (cset-intersection (sre->cset 'hex-digit) (sre->cset 'alpha))))))
 
-(test-end)
+
+)

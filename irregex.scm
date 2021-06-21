@@ -1,3 +1,40 @@
+#lang racket
+
+;; grabbed this list of exports from irregex#.scm:
+(provide
+ irregex string->irregex sre->irregex
+ string->sre maybe-string->sre
+ irregex? irregex-match-data?
+ irregex-new-matches irregex-reset-matches!
+ irregex-search irregex-search/matches irregex-match
+ irregex-search/chunked irregex-match/chunked make-irregex-chunker
+ irregex-match-substring irregex-match-subchunk
+ irregex-match-start-chunk irregex-match-start-index
+ irregex-match-end-chunk irregex-match-end-index
+ irregex-match-num-submatches irregex-match-names
+ irregex-match-valid-index?
+ irregex-fold irregex-replace irregex-replace/all
+ irregex-dfa irregex-dfa/search
+ irregex-nfa irregex-flags irregex-lengths irregex-names
+ irregex-num-submatches irregex-extract irregex-split
+
+ ;; oh... there's more?
+ irregex-fold/chunked
+ 
+ ;; maybe only exposed for testing?
+ cset=? plist->cset string->cset cset-union range->cset
+ cset-size cset-intersection sre->cset cset->plist cset-contains?
+ cset-complement cset-difference
+ )
+
+;; porting note: it looks like mutable lists were used in only
+;; one place, a counter in a state. I replaced it with a box.
+;; The update operation is easy to identify because it used
+;; set-car!, but it's much harder to be confident about places
+;; where lookup occurs, without carefully tracing the possible
+;; flow of that data. I've found at least one of them, but
+;; there may be lots more.
+
 ;;;; irregex.scm -- IrRegular Expressions
 ;;
 ;; Copyright (c) 2005-2021 Alex Shinn.  All rights reserved.
@@ -225,7 +262,7 @@
        #t))
 
 (define (irregex-match-valid-index? m n)
-  (if (not (irregex-match-data? m))
+  (when (not (irregex-match-data? m))
       (error "irregex-match-valid-index?: not match data" m))
   (if (integer? n)
       (if (not (exact? n))
@@ -285,9 +322,9 @@
                                       res))))))))
          (o (if (pair? o) (cdr o) o))
          (get-subchunk (and (pair? o) (car o))))
-    (if (not (and (procedure? get-next) (procedure? get-str)
-                  (procedure? get-start) (procedure? get-substr)))
-        (error "make-irregex-chunker: expected a procdure"))
+    (when (not (and (procedure? get-next) (procedure? get-str)
+                    (procedure? get-start) (procedure? get-substr)))
+      (error "make-irregex-chunker: expected a procdure"))
     (vector get-next get-str get-start get-end get-substr get-subchunk)))
 
 (define (chunker-get-next cnk) (vector-ref cnk 0))
@@ -421,12 +458,12 @@
 (define (string-cat-reverse/aux len string-list)
   (let ((res (make-string len)))
     (let lp ((i len) (ls string-list))
-      (if (pair? ls)
-          (let* ((s (car ls))
-                 (slen (string-length s))
-                 (i (- i slen)))
-            (%%string-copy! res i s 0 slen)
-            (lp i (cdr ls)))))
+      (when (pair? ls)
+        (let* ((s (car ls))
+               (slen (string-length s))
+               (i (- i slen)))
+          (%%string-copy! res i s 0 slen)
+          (lp i (cdr ls)))))
     res))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -677,7 +714,7 @@
   (if (string? obj) (string->sre obj) obj))
 
 (define (string->sre str . o)
-  (if (not (string? str)) (error "string->sre: expected a string" str))
+  (when (not (string? str)) (error "string->sre: expected a string" str))
   (let ((end (string-length str))
         (flags (symbol-list->flags o)))
 
@@ -1878,13 +1915,13 @@
                           (substring (car src1) i j))))
 
 (define (irregex-search x str . o)
-  (if (not (string? str)) (error "irregex-search: not a string" str))
+  (when (not (string? str)) (error "irregex-search: not a string" str))
   (let ((start (or (and (pair? o) (car o)) 0))
         (end (or (and (pair? o) (pair? (cdr o)) (cadr o)) (string-length str))))
-    (if (not (and (integer? start) (exact? start)))
-        (error "irregex-search: not an exact integer" start))
-    (if (not (and (integer? end) (exact? end)))
-        (error "irregex-search: not an exact integer" end))
+    (when (not (and (integer? start) (exact? start)))
+      (error "irregex-search: not an exact integer" start))
+    (when (not (and (integer? end) (exact? end)))
+      (error "irregex-search: not an exact integer" end))
     (irregex-search/chunked x
                             irregex-basic-string-chunker
                             (list str start end)
@@ -1934,7 +1971,7 @@
       #f)))
    (else
     (let ((res (irregex-search/backtrack irx cnk init src i matches)))
-      (if res (%irregex-match-fail-set! res #f))
+      (when res (%irregex-match-fail-set! res #f))
       res))))
 
 (define (irregex-search/backtrack irx cnk init src i matches)
@@ -1965,13 +2002,13 @@
                   #f))))))))
 
 (define (irregex-match irx str . o)
-  (if (not (string? str)) (error "irregex-match: not a string" str))
+  (when (not (string? str)) (error "irregex-match: not a string" str))
   (let ((start (or (and (pair? o) (car o)) 0))
         (end (or (and (pair? o) (pair? (cdr o)) (cadr o)) (string-length str))))
-    (if (not (and (integer? start) (exact? start)))
-        (error "irregex-match: not an exact integer" start))
-    (if (not (and (integer? end) (exact? end)))
-        (error "irregex-match: not an exact integer" end))
+    (when (not (and (integer? start) (exact? start)))
+      (error "irregex-match: not an exact integer" start))
+    (when (not (and (integer? end) (exact? end)))
+      (error "irregex-match: not an exact integer" end))
     (irregex-match/chunked irx
                            irregex-basic-string-chunker
                            (list str start end))))
@@ -2081,6 +2118,11 @@
         ((= i slots) memory)
       (vector-set! memory i (make-vector size #f)))))
 
+(define (my-zero? n)
+  (when (not (number? n))
+    (fprintf (current-error-port) "zero check about to fail\n"))
+  (zero? n))
+
 ;; this finds the longest match starting at a given index
 (define (dfa-match/longest dfa cnk src start end-src end matches index)
   (let* ((get-str (chunker-get-str cnk))
@@ -2088,7 +2130,7 @@
          (get-end (chunker-get-end cnk))
          (get-next (chunker-get-next cnk))
          (initial-state (dfa-init-state dfa))
-         (memory-size (car initial-state))
+         (memory-size (unbox (car initial-state)))
          (submatches? (not (zero? memory-size)))
          ;; A vector of vectors, each of size <number of start/end submatches>
          (memory (make-initial-memory memory-size matches))
@@ -2327,8 +2369,8 @@
   (vector-set! nfa (+ (* i *nfa-num-fields*) 1) x))
 (define (nfa-add-epsilon! nfa i x t)
   (let ((eps (nfa-get-epsilons nfa i)))
-    (if (not (assv x eps))
-        (nfa-set-epsilons! nfa i (cons (cons x t) eps)))))
+    (when (not (assv x eps))
+      (nfa-set-epsilons! nfa i (cons (cons x t) eps)))))
 
 (define (nfa-get-reorder-commands nfa mst)
   (cond ((assoc mst (vector-ref nfa (+ (* (mst-hash mst) *nfa-num-fields*) 2)))
@@ -2379,12 +2421,12 @@
       (define (new-state-number state)
         (max n (+ 1 state)))
       (define (add-state! n2 trans-ls)
-        (if (>= (* n2 *nfa-num-fields*) (vector-length buf))
-            (let ((tmp (make-vector (* 2 (vector-length buf)) '())))
-              (do ((i (- (vector-length buf) 1) (- i 1)))
-                  ((< i 0))
-                (vector-set! tmp i (vector-ref buf i)))
-              (set! buf tmp)))
+        (when (>= (* n2 *nfa-num-fields*) (vector-length buf))
+          (let ((tmp (make-vector (* 2 (vector-length buf)) '())))
+            (do ((i (- (vector-length buf) 1) (- i 1)))
+              ((< i 0))
+              (vector-set! tmp i (vector-ref buf i)))
+            (set! buf tmp)))
         (nfa-set-state-trans! buf n2 trans-ls)
         n2)
       (define (extend-state! next trans-cs)
@@ -2486,8 +2528,8 @@
                    (and
                     next
                     (let ((a (lp (cdar ls) (new-state-number next) flags next)))
-                      (if a
-                          (nfa-add-epsilon! buf a next #f))
+                      (when a
+                        (nfa-add-epsilon! buf a next #f))
                       a))))
                 ((+ *)
                  (let ((next (lp (cdr ls) n flags next)))
@@ -2501,8 +2543,8 @@
                       (cond
                        (a
                         ;; for *, insert an epsilon transition as in ? above
-                        (if (eq? '* (caar ls))
-                            (nfa-add-epsilon! buf a new #f))
+                        (when (eq? '* (caar ls))
+                          (nfa-add-epsilon! buf a new #f))
                         ;; for both, insert a loop back to self
                         (nfa-add-epsilon! buf new a #f)))
                       a))))
@@ -2784,7 +2826,7 @@
          ;; start-closure to ensure that leading tags are set properly.
          (init-set (tag-set-commands-for-closure nfa start start-closure '()))
          (dummy (make-mst nfa))
-         (init-state (list dummy #f `((,start-closure #f () . ,init-set)))))
+         (init-state (list dummy (box #f) `((,start-closure #f () . ,init-set)))))
     ;; Unmarked states are just sets of NFA states with tag-maps, marked states
     ;; are sets of NFA states with transitions to sets of NFA states
     (let lp ((unmarked-states (list start-closure))
@@ -2793,7 +2835,8 @@
       (cond
        ((null? unmarked-states)
         ;; Abuse finalizer slot for storing the number of memory slots we need
-        (set-car! (cdr init-state) (+ (nfa-highest-map-index nfa) 1))
+        ;; FIXME temporarily changed to mcar, this just delays the problem...
+        (set-box! (car (cdr init-state)) (+ (nfa-highest-map-index nfa) 1))
         (dfa-renumber (reverse marked-states)))
        ((and max-states (> dfa-size max-states)) ; Too many DFA states
         #f)
@@ -3789,7 +3832,7 @@
 ;;;; Match and Replace Utilities
 
 (define (irregex-fold/fast irx kons knil str . o)
-  (if (not (string? str)) (error "irregex-fold: not a string" str))
+  (when (not (string? str)) (error "irregex-fold: not a string" str))
   (let* ((irx (irregex irx))
          (matches (irregex-new-matches irx))
          (finish (or (and (pair? o) (car o)) (lambda (i acc) acc)))
@@ -3799,10 +3842,10 @@
                   (string-length str)))
          (init-src (list str start end))
          (init (cons init-src start)))
-    (if (not (and (integer? start) (exact? start)))
-        (error "irregex-fold: not an exact integer" start))
-    (if (not (and (integer? end) (exact? end)))
-        (error "irregex-fold: not an exact integer" end))
+    (when (not (and (integer? start) (exact? start)))
+      (error "irregex-fold: not an exact integer" start))
+    (when (not (and (integer? end) (exact? end)))
+      (error "irregex-fold: not an exact integer" end))
     (irregex-match-chunker-set! matches irregex-basic-string-chunker)
     (let lp ((src init-src) (from start) (i start) (acc knil))
       (if (>= i end)
@@ -3829,7 +3872,7 @@
                     (lp (list str j end) j j acc))))))))))
 
 (define (irregex-fold irx kons . args)
-  (if (not (procedure? kons)) (error "irregex-fold: not a procedure" kons))
+  (when (not (procedure? kons)) (error "irregex-fold: not a procedure" kons))
   (let ((kons2 (lambda (i m acc) (kons i (irregex-copy-matches m) acc))))
     (apply irregex-fold/fast irx kons2 args)))
 
@@ -3841,7 +3884,7 @@
                 (cadr o)
                 ((chunker-get-start cnk) start)))
          (init (cons start i)))
-    (if (not (integer? i)) (error "irregex-fold/chunked: not an integer" i))
+    (when (not (integer? i)) (error "irregex-fold/chunked: not an integer" i))
     (irregex-match-chunker-set! matches cnk)
     (let lp ((start start) (i i) (acc knil))
       (if (not start)
@@ -3863,12 +3906,12 @@
                             (lp end-src end-index acc)))))))))))
 
 (define (irregex-fold/chunked irx kons . args)
-  (if (not (procedure? kons)) (error "irregex-fold/chunked: not a procedure" kons))
+  (when (not (procedure? kons)) (error "irregex-fold/chunked: not a procedure" kons))
   (let ((kons2 (lambda (s i m acc) (kons s i (irregex-copy-matches m) acc))))
     (apply irregex-fold/chunked/fast irx kons2 args)))
 
 (define (irregex-replace irx str . o)
-  (if (not (string? str)) (error "irregex-replace: not a string" str))
+  (when (not (string? str)) (error "irregex-replace: not a string" str))
   (let ((m (irregex-search irx str)))
     (if m
         (string-cat-reverse
@@ -3879,7 +3922,7 @@
         str)))
 
 (define (irregex-replace/all irx str . o)
-  (if (not (string? str)) (error "irregex-replace/all: not a string" str))
+  (when (not (string? str)) (error "irregex-replace/all: not a string" str))
   (irregex-fold/fast
    irx
    (lambda (i m acc)
@@ -3931,7 +3974,7 @@
           (lp (cdr ls) (cons (car ls) res)))))))
 
 (define (irregex-extract irx str . o)
-  (if (not (string? str)) (error "irregex-extract: not a string" str))
+  (when (not (string? str)) (error "irregex-extract: not a string" str))
   (apply irregex-fold/fast
          irx
          (lambda (i m a) (cons (irregex-match-substring m) a))
@@ -3941,7 +3984,7 @@
          o))
 
 (define (irregex-split irx str . o)
-  (if (not (string? str)) (error "irregex-split: not a string" str))
+  (when (not (string? str)) (error "irregex-split: not a string" str))
   (let ((start (if (pair? o) (car o) 0))
         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
     (irregex-fold/fast

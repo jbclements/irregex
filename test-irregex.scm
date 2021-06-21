@@ -1,14 +1,23 @@
+#lang racket
+
+;; quick porting to rkt
+
+;; porting notes/questions
+;; not sure about the third argument to "string-split" used here. Can't find
+;; docs on the string-split used here in R7RS small, got lost looking in R7RS big.
+;; it *appears* that the #t used as third argument may correspond to #:trim? #f
+;; in Racket
+
+;; docs for chibi match at
+;; http://synthcode.com/scheme/chibi/lib/chibi/match.html
+
 #!/usr/local/bin/csi -script
 
-(cond-expand
- (chicken-5 (import test matchable (chicken format) (chicken port) (chicken io) (chicken string)))
- (chicken (use test extras utils matchable))
- (else
-  (import (scheme base) (scheme char) (scheme cxr)
-          (scheme file) (scheme load) (scheme write)
-          (srfi 130) (chibi match) (chibi test))))
+(module+ test
 
-(load "irregex.scm")
+(require irregex/irregex
+         "chibi-test.rkt")
+
 
 (define (cat . args)
   (let ((out (open-output-string)))
@@ -83,8 +92,8 @@
                  (lp)))))))))))
 
 (define (test-re matcher line)
-  (match (string-split line "\t" #t)
-    ((pattern input result subst output)
+  (match (string-split line "\t" #:trim? #f)
+    ((list pattern input result subst output)
      (let ((name (cat pattern "  " input "  " result "  " subst)))
        (cond
         ((equal? "c" result)
@@ -97,14 +106,16 @@
     (else
      (warning "invalid regex test line" line))))
 
-(test-begin)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; basic irregex
 
 (for-each
  (lambda (opts)
-   (test-group (cat "irregex - " opts)
+   (ru:run-tests
+    (ru:test-suite
+     (cat "'" opts)
      (call-with-input-file "re-tests.txt"
        (lambda (in)
          (port-for-each
@@ -113,7 +124,7 @@
                        (irregex-search (apply irregex pat opts) str))
                      line))
           read-line
-          in)))))
+          in))))))
  '((backtrack)
    (fast)
    ))
@@ -192,13 +203,14 @@
 
 (for-each
  (lambda (opts)
-   (test-group (cat "irregex/chunked - " opts)
+   (ru:run-tests
+   (ru:test-suite (cat "irregex/chunked - " opts)
      (call-with-input-file "re-tests.txt"
        (lambda (in)
          (port-for-each
           (lambda (line)
-            (match (string-split line "\t" #t)
-              ((pattern input result subst output)
+            (match (string-split line "\t" #:trim? #f)
+              ((list pattern input result subst output)
                (let ((name
                       (cat pattern "  " input "  " result "  " subst)))
                  (cond
@@ -226,7 +238,7 @@
                (warning "invalid regex test line" line)))
             )
           read-line
-          in)))))
+          in))))))
  '((backtrack)
    (fast)
    ))
@@ -255,7 +267,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(test-group "unmatchable patterns"
+(ru:run-tests
+(ru:test-suite "unmatchable patterns"
   (test-assert (not (irregex-search '(or) "abc")))
   (test-assert (not (irregex-search '(: "ab" (or)) "abc")))
   (test-assert (not (irregex-search '(submatch "ab" (or)) "abc")))
@@ -267,11 +280,12 @@
   (test-assert (not (irregex-search '("") "abc")))
   (test-assert (not (irregex-search '(: "ab" ("")) "abc")))
   (test-assert (not (irregex-search '(: (+ print) white) "abc")))
-  )
+  ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(test-group "beginning/end of chunks"
+(ru:run-tests
+(ru:test-suite "beginning/end of chunks"
   (test-assert
       (irregex-search/chunked '(: bos "foo") rope-chunker '((" foo" 0 4)) 1))
   (test-assert
@@ -284,11 +298,12 @@
       (irregex-search/chunked '(: bos "foo" eos) rope-chunker '((" foo" 0 4)) 1))
   (test-assert
       (irregex-search/chunked '(: bos "foo" eos) rope-chunker '(("  foo" 1 5)) 2))
-  )
+  ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(test-group "Case sensitivity"
+(ru:run-tests
+(ru:test-suite "Case sensitivity"
   (test-assert
    (not (irregex-match '(seq "abc") "ABC")))
   (test-assert
@@ -308,11 +323,12 @@
   (test-assert
    (not (irregex-match '(w/nocase (* (~ (/ #\a #\c)))) "abc")))
   (test-assert
-   (not (irregex-match '(w/nocase (* (~ (/ #\a #\c)))) "ABC"))))
+   (not (irregex-match '(w/nocase (* (~ (/ #\a #\c)))) "ABC")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(test-group "API"
+(ru:run-tests
+(ru:test-suite "API"
   (test-group "predicates"
     (test-assert (irregex? (irregex "a.*b")))
     (test-assert (irregex? (irregex '(: "a" (* any) "b"))))
@@ -373,11 +389,12 @@
     (test #f (irregex-match-end-index (irregex-search "a(.*)|b" "b") 1))
     (test-error (irregex-match-end-index (irregex-search "a(.*)|b" "axxx") 2))
     (test-error (irregex-match-end-index (irregex-search "a(.*)|b" "b") 2)))
-  )
+  ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(test-group "utils"
+(ru:run-tests
+(ru:test-suite "utils"
   (test "h*llo world"
       (irregex-replace "[aeiou]" "hello world" "*"))
   (test "hello world"
@@ -450,7 +467,7 @@
       (irregex-extract (irregex "[aeiou]*") "foobarbaz"))
   (test '("Line 1\n" "Line 2\n" "Line 3")
       (irregex-split 'bol "Line 1\nLine 2\nLine 3"))
-  )
+  ))
 
 (define (extract name irx str)
   (irregex-match-substring (irregex-match irx str) name))
@@ -460,8 +477,8 @@
   (irregex-match-start-index (irregex-match irx str) name))
 (define (end-idx name irx str)
   (irregex-match-end-index (irregex-match irx str) name))
-
-(test-group "named submatches"
+(ru:run-tests
+(ru:test-suite "named submatches"
   (test "matching submatch is seen and extracted"
         "first" (extract 'first `(or (submatch-named first "first")
                                      (submatch-named second "second"))
@@ -507,7 +524,7 @@
   (test "submatch end"
         4 (end-idx 'xs `(seq "a" (submatch-named xs (+ "x")) "b") "axxxb"))
   (test-error "unknown submatch start"
-              (end-idx 'xs `(seq "a" (submatch-named ys (+ "x")) "b") "axxxb")))
+              (end-idx 'xs `(seq "a" (submatch-named ys (+ "x")) "b") "axxxb"))))
 
 ;; This is here to help optimized implementations catch segfaults and
 ;; other such problems.  These calls will always return errors in plain
@@ -516,7 +533,8 @@
 ;; standardized way of signaling and catching exceptions, these tests
 ;; should be changed and expanded to check for specific condition types,
 ;; and probably moved to the group where the procedure is being tested.
-(test-group "error handling"
+(ru:run-tests
+(ru:test-suite "error handling"
   (test-error (irregex 'invalid-sre))
   (test-error (string->irregex 'not-a-string))
   (test-error (sre->irregex 'invalid-sre))
@@ -573,7 +591,6 @@
   ;; Are these supposed to be exported?
   ;; irregex-nfa, irregex-dfa, irregex-dfa/search, irregex-dfa/extract
   ;; irregex-flags, irregex-lengths
-  )
+  ))
 
-(test-end)
-
+)
