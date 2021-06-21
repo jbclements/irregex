@@ -1,10 +1,9 @@
+#lang racket
 
 ;;; Adapted from SCSH SRE tests by Christoph Hetz
 
-(cond-expand
-  (chicken-5 (import test))
-  (else (use test)))
-(load "irregex.scm")
+(require "irregex.rkt"
+         "chibi-test.rkt")
 
 (define-syntax rx
   (syntax-rules ()
@@ -14,7 +13,9 @@
 (define test-string 
   "Dieser Test-String wurde am 29.07.2004 um 5:23PM erstellt.\na aa aaa aaaa\nab aabb aaabbb\naba abba abbba\n1 12 123 1234\nyyyyyyyyyy\n")
 
-(test-begin)
+(ru:run-tests
+(ru:test-suite
+ "scsh tests"
 
 (test-assert (not (irregex-search '(: "xxx") test-string)))
 
@@ -234,6 +235,6 @@
       (kill-matches (rx (or "Windows" "tcl" "Intel")) 
                     "Windows will disappear, also tcl and Intel")))
 
-(test-end)
+))
 
 

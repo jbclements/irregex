@@ -1,9 +1,11 @@
-#!/usr/local/bin/csi -script
+#lang racket
 
-(cond-expand
-  (chicken-5 (import test))
-  (else (use test extras utils)))
-(load "irregex.scm")
+(require "irregex.rkt"
+         "chibi-test.rkt")
+
+(ru:run-tests
+(ru:test-suite
+ "pcre tests"
 
 (test-begin)
 
@@ -25,7 +27,6 @@
 ;;;; not added until perl 5.10 - implementation is too ugly and this
 ;;;; is too silly of a feature to keep
 ;; (test-assert (irregex-search "(sens|respons)e and (?1)ibility" "sense and responsibility"))
-
-(test-end)
+))
 
 

@@ -1,7 +1,14 @@
+#lang racket
+
+(require "irregex.rkt")
+
 ;;;; irregex-utils.scm
 ;;
 ;; Copyright (c) 2010 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
+
+;; this is a guess...
+(define every andmap)
 
 (define rx-special-chars
   "\\|[](){}.*+?^$#")
@@ -130,7 +137,7 @@
              (lp `(cset ,@(sre->cset x))))))
           ((w/case w/nocase)
            (display "(?" out)
-           (if (eq? (car x) 'w/case) (display "-" out))
+           (when (eq? (car x) 'w/case) (display "-" out))
            (display ":" out)
            (for-each lp (cdr x))
            (display ")" out))

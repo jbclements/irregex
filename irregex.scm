@@ -25,6 +25,10 @@
  cset=? plist->cset string->cset cset-union range->cset
  cset-size cset-intersection sre->cset cset->plist cset-contains?
  cset-complement cset-difference
+
+ ;; used in draw-graph
+ sre->nfa nfa-start-state nfa-get-state-trans nfa-get-epsilons
+ nfa->dfa dfa-init-state dfa-cell-commands dfa-next-state
  )
 
 ;; porting note: it looks like mutable lists were used in only

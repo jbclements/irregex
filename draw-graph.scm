@@ -1,3 +1,4 @@
+#lang racket
 ;;; draw-graph
 ;;
 ;; This is a quick and dirty program which can generate Graphviz DOT
@@ -16,29 +17,33 @@
 ;;
 
 ;(use utf8)                              ; needed?
-(cond-expand
-  (chicken-5 (import (chicken process-context) (chicken format) (chicken string)))
-  (else))
 
-(include "irregex.scm")
+;; porting notes: this code compiles but is essentially entirely untested.
+
+(require "irregex.rkt")
+
+(define (string-intersperse los s)
+  (apply string-append (add-between los s)))
+
+
 
 ;; Ensure nonprintable characters are not emitted directly.  Chicken doesn't
 ;; handle UTF-8 100% correctly, it seems, and Graphviz doesn't at handle it all.
 (define (char->string c)
   (if (or (char-numeric? c) (char-alphabetic? c))
       (string c)
-      (sprintf "[~A]" (char->integer c))))
+      (format "[~A]" (char->integer c))))
 
 (define (cset->label cset)
   (if (char? cset)
       (char->string cset)
       (string-intersperse (map (lambda (cs)
-                                 (if (eqv? (car cs) (cdr cs))
-                                     (char->string (car cs))
-                                     (sprintf "~A..~A"
-                                              (char->string (car cs)) (char->string (cdr cs)))))
-                               (vector->list cset))
-                          " | ")))
+                          (if (eqv? (car cs) (cdr cs))
+                              (char->string (car cs))
+                              (format "~A..~A"
+                                       (char->string (car cs)) (char->string (cdr cs)))))
+                        (vector->list cset))
+                   " | ")))
 
 (define (draw-nfa sre)
   (let ((nfa (sre->nfa sre 0)))
@@ -66,7 +71,7 @@
                           ;; normally-quoted strings...
                           (printf "\t~A -> ~A [label=\"~A\"]\n"
                                   st (car ns) (if (cdr ns)
-                                                  (sprintf "&epsilon;/t~A" (cdr ns))
+                                                  (format "&epsilon;/t~A" (cdr ns))
                                                   "&epsilon;")))
                         eps)
               (if (null? trans)
@@ -80,26 +85,26 @@
 
 (define (finalizer->label fin)
   (string-intersperse (map (lambda (tag&slot)
-                             (let ((tag (car tag&slot))
-                                   (slot (cdr tag&slot)))
-                               (sprintf "t~A &larr; m~A(~A)" tag slot tag)))
-                           (sort fin (lambda (a b) (< (car a) (car b)))))
-                      "<br/>"))
+                      (let ((tag (car tag&slot))
+                            (slot (cdr tag&slot)))
+                        (format "t~A &larr; m~A(~A)" tag slot tag)))
+                    (sort fin (lambda (a b) (< (car a) (car b)))))
+               "<br/>"))
 
 (define (commands->label copy&set-commands)
-  (sprintf "<br/>~A~A"
+  (format "<br/>~A~A"
            (string-intersperse
             (map (lambda (c)
                    (let ((tag (vector-ref c 0))
                          (ss (vector-ref c 1))
                          (ds (vector-ref c 2)))
-                     (sprintf "m~A(~A) &larr; m~A(~A)" ds tag ss tag)))
+                     (format "m~A(~A) &larr; m~A(~A)" ds tag ss tag)))
                  (or (car copy&set-commands) '())) "<br/>")
            (string-intersperse
             (map (lambda (s)
                    (let ((slot (cdr s))
                          (tag (car s)))
-                     (sprintf "m~A(~A) &larr; p" slot tag)))
+                     (format "m~A(~A) &larr; p" slot tag)))
                  (or (cdr copy&set-commands) '())) "<br/>")))
 
 (define (draw-dfa sre)
@@ -145,6 +150,8 @@
                 (lp todo-states todo-numbers (cons sn seen)))))))
     (printf "}\n")))
 
+;; unported:
+#;(
 (define (show-usage)
   (printf "Usage: ~A [nfa | dfa]\n" (program-name))
   (exit 1))
@@ -155,4 +162,4 @@
        (draw-nfa (maybe-string->sre (read))))
       ((string=? "dfa" (car (command-line-arguments)))
        (draw-dfa (maybe-string->sre (read))))
-      (else (show-usage)))
+      (else (show-usage))))

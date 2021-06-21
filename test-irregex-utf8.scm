@@ -1,9 +1,8 @@
-#!/usr/local/bin/csi -script
+#lang racket
 
-(cond-expand
-  (chicken-5 (import test))
-  (else (use test extras utils)))
-(load "irregex.scm")
+(require "irregex.rkt" "chibi-test.rkt")
+
+;; essentially unported; tests do not pass.
 
 (test-begin)
 
