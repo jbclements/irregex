@@ -1,9 +1,15 @@
+#lang racket
 
-(cond-expand
-  (chicken-5 (import srfi-13 (chicken io) (chicken string) (chicken time)))
-  (else (use extras data-structures srfi-13)))
 
-(include "../irregex")
+(require "../irregex.scm")
+
+;; just throwing this in here. If this is slow,
+;; will it bork all of the timings? Not sure.
+(define (string-concatenate-reverse ls)
+  (apply string-append (reverse ls)))
+
+;; totally unsure about this:
+(define nth-value list-ref)
 
 (define-syntax time-expr
   (syntax-rules ()
