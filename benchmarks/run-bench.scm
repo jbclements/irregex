@@ -8,15 +8,15 @@
 (define (string-concatenate-reverse ls)
   (apply string-append (reverse ls)))
 
-;; totally unsure about this:
-(define nth-value list-ref)
+(define (round-to-thousandth n)
+  (/ (round (* n 1000)) 1000))
 
 (define-syntax time-expr
   (syntax-rules ()
     ((time-expr expr)
-     (let ((start (nth-value 0 (cpu-time))))
+     (let ((start (current-inexact-milliseconds)))
        expr
-       (- (nth-value 0 (cpu-time)) start)))))
+       (- (current-inexact-milliseconds) start)))))
 
 (define (string-replicate str reps)
   (let lp ((ls '()) (reps reps))
@@ -34,7 +34,9 @@
                                      expr))))
                    (display name) (display ": ")
                    (display variation) (display ": ")
-                   (write time-taken) (newline))))))
+                   (write (round-to-thousandth time-taken))
+                   (display "ms")
+                   (newline))))))
     (let ((comp-count (string->number comp-count))
           (exec-count (string->number exec-count)))
       ;; compile time
@@ -52,6 +54,9 @@
                      reps)
               (lp (* mult 10) (quotient reps 10))))))))))
 
+(define not-empty-string?
+  (compose not (λ (s) (equal? s ""))))
+
 (call-with-input-file "re-benchmarks.txt"
   (lambda (in)
     (let lp ()
@@ -61,7 +66,9 @@
          ((irregex-match "^\\s*(?:#.*)?$" line)
           (lp))
          (else
-          (let ((ls (string-split line "\t")))
-            (apply run-bench ls)
+          (let* ((ls (string-split line "\t" #:trim? #f)))
+            (define ls2
+              (filter not-empty-string? ls))
+            (apply run-bench ls2)
             (lp))))))))
 

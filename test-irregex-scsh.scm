@@ -2,7 +2,7 @@
 
 ;;; Adapted from SCSH SRE tests by Christoph Hetz
 
-(require "irregex.rkt"
+(require "irregex.scm"
          "chibi-test.rkt")
 
 (define-syntax rx
