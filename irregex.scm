@@ -400,7 +400,7 @@
 ;; (define *all-chars* `(/ ,(integer->char (- (char->integer #\space) 32)) ,(integer->char (+ (char->integer #\space) 223))))
 
 ;; set to #f to ignore even an explicit request for utf8 handling
-(define *allow-utf8-mode?* #t)
+(define *allow-utf8-mode?* #f)
 
 ;; (define *named-char-properties* '())
 

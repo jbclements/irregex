@@ -4,8 +4,9 @@
 
 ;; essentially unported; tests do not pass.
 
-(test-begin)
-
+(ru:run-tests
+(ru:test-suite
+ "test-utf8"
 (test-assert (irregex-search "(?u:<..>)" "<漢字>"))
 (test-assert (irregex-search "(?u:<.*>)" "<漢字>"))
 (test-assert (irregex-search "(?u:<.+>)" "<漢字>"))
@@ -36,4 +37,4 @@
 (test-assert (not (irregex-search "(?u:[é])" "e")))
 (test-assert (not (irregex-search "(?u:[一二])" "三四")))
 
-(test-end)
+))
